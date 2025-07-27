@@ -27,11 +27,11 @@ const API_CONFIG = {
     PRODUCT_DETAILS: '/api/v1/consumer/products',
     CATEGORIES: '/api/v1/consumer/view-all-category',
     CREATE_REVIEW: '/api/v1/consumer/create-review',
-    // Wishlist endpoints
+    
     ADD_TO_WISHLIST: '/api/v1/wishlist/add',
     GET_WISHLIST: '/api/v1/wishlist/',
     REMOVE_FROM_WISHLIST: '/api/v1/wishlist',
-    
+
     ADD_TO_CART: '/api/v1/addToCart/add',
     UPDATE_CART_QUANTITY: '/api/v1/addToCart/update',
     GET_CART: '/api/v1/addToCart',
