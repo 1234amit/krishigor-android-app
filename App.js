@@ -18,6 +18,10 @@ import CategoryProductsScreen from './screens/CategoryProductsScreen';
 import SearchResultsScreen from './screens/SearchResultsScreen';
 import WishlistScreen from './screens/WishlistScreen';
 import CartScreen from './screens/CartScreen';
+import CheckoutScreen from './screens/CheckoutScreen';
+import OrdersScreen from './screens/OrdersScreen';
+import PaymentMethodScreen from './screens/PaymentMethodScreen';
+import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -57,6 +61,10 @@ export default function App() {
         <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
         <Stack.Screen name="Wishlist" component={WishlistScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
+         <Stack.Screen name="Checkout" component={CheckoutScreen} />
+         <Stack.Screen name="Orders" component={OrdersScreen} />
+         <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
+         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
       </Stack.Navigator>
       <StatusBar style="auto" />
       <Toast />

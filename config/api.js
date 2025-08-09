@@ -1,8 +1,25 @@
 // API Configuration
+import { Platform } from 'react-native';
+
+// Prefer environment-aware defaults to reduce network errors
+// - Android emulator uses 10.0.2.2 to access host machine
+// - iOS simulator can use localhost
+// - Physical devices must use your computer's LAN IP
+const LAN_IP = '192.168.0.100'; // Update if your PC's IP changes
+// Emulator default (10.0.2.2). Set to true only when testing on a physical Android device.
+const FORCE_LAN_ON_ANDROID = false;
+const getBaseUrl = () => {
+  // Prefer LAN for reliability across device/emulator
+  if (Platform.OS === 'android') {
+    return FORCE_LAN_ON_ANDROID ? `http://${LAN_IP}:4000` : 'http://10.0.2.2:4000';
+  }
+  if (Platform.OS === 'ios') return 'http://localhost:4000';
+  return `http://${LAN_IP}:4000`;
+};
+
 const API_CONFIG = {
-  // Development - Use your actual IP address
-  // For physical device testing, replace with your computer's IP address
-  BASE_URL: 'http://192.168.0.100:4000', // Your actual IP address
+  // You can override this to a fixed LAN URL if testing on a physical device
+  BASE_URL: getBaseUrl(),
   
   // Alternative configurations for different setups
   // BASE_URL: 'http://10.0.2.2:4000', // Android emulator localhost
@@ -38,11 +55,16 @@ const API_CONFIG = {
     DELETE: '/api/v1/addToCart/remove',
     REMOVE_FROM_CART: '/api/v1/addToCart/remove',
     
-    CREATE_ORDER: '/api/v1/orders/create',
-    GET_ORDERS: '/api/v1/orders',
-    GET_ORDER_DETAILS: '/api/v1/orders',
-    UPDATE_ORDER_STATUS: '/api/v1/orders/status',
-    CANCEL_ORDER: '/api/v1/orders/cancel',
+    CREATE_ORDER: '/api/v1/order/create',
+    GET_ORDERS: '/api/v1/order',
+    GET_ORDER_DETAILS: '/api/v1/order',
+    UPDATE_ORDER_STATUS: '/api/v1/order/status',
+    CANCEL_ORDER: '/api/v1/order/cancel',
+    // Payment endpoints
+    PAYMENTS_BASE: '/api/v1/payments',
+    INITIATE_COD: '/api/v1/payments/initiate-cod',
+    PAYMENT_DETAILS: '/api/v1/payments',
+    UPDATE_PAYMENT_STATUS: '/api/v1/payments',
   }
 };
 
@@ -82,6 +104,11 @@ export const API_URLS = {
   GET_ORDER_DETAILS: getApiUrl(API_CONFIG.ENDPOINTS.GET_ORDER_DETAILS),
   UPDATE_ORDER_STATUS: getApiUrl(API_CONFIG.ENDPOINTS.UPDATE_ORDER_STATUS),
   CANCEL_ORDER: getApiUrl(API_CONFIG.ENDPOINTS.CANCEL_ORDER),
+  // Payment URLs
+  PAYMENTS_BASE: getApiUrl(API_CONFIG.ENDPOINTS.PAYMENTS_BASE),
+  INITIATE_COD: getApiUrl(API_CONFIG.ENDPOINTS.INITIATE_COD),
+  PAYMENT_DETAILS: (paymentId) => `${getApiUrl(API_CONFIG.ENDPOINTS.PAYMENT_DETAILS)}/${paymentId}`,
+  UPDATE_PAYMENT_STATUS: (paymentId) => `${getApiUrl(API_CONFIG.ENDPOINTS.UPDATE_PAYMENT_STATUS)}/${paymentId}/status`,
 };
 
 export default API_CONFIG; 

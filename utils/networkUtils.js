@@ -1,19 +1,20 @@
 import axios from 'axios';
 import { API_URLS } from '../config/api';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 // Common IP addresses to test for development
 const COMMON_DEV_IPS = [
-  'http://192.168.0.100:4000', // Your actual IP
+  // Emulator-first defaults
+  Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000',
+  // Common LAN patterns (adjust LAN_IP in config if needed)
+  'http://192.168.0.100:4000',
   'http://192.168.1.100:4000',
   'http://192.168.1.101:4000',
   'http://192.168.1.102:4000',
   'http://192.168.1.103:4000',
   'http://192.168.1.104:4000',
   'http://192.168.1.105:4000',
-  'http://10.0.2.2:4000', // Android emulator
-  'http://localhost:4000', // Same device
-  'http://127.0.0.1:4000', // Localhost alternative
+  'http://127.0.0.1:4000',
 ];
 
 // Test if the API server is reachable

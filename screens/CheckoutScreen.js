@@ -219,38 +219,27 @@ const CheckoutScreen = ({ navigation, route }) => {
       console.log('Cart items:', cartItems);
       console.log('Total amount:', calculateFinalTotal());
 
+      // Match backend controller (expects: items[], shippingAddress{}, paymentMethod, orderNotes, deliveryFee)
       const orderData = {
-        customerInfo: {
-          name: checkoutData.customerName,
-          phone: checkoutData.customerPhone,
-          email: checkoutData.customerEmail,
-        },
-        shippingInfo: {
+        items: cartItems.map(item => ({
+          productId: item.productId?._id || item.productId || item.product?._id || item.product?.id,
+          quantity: Number(item.quantity) || 1,
+        })),
+        shippingAddress: {
+          fullName: checkoutData.customerName,
+          phoneNumber: checkoutData.customerPhone,
           address: checkoutData.shippingAddress,
-          division: checkoutData.shippingDivision,
-          district: checkoutData.shippingDistrict,
-          upazila: checkoutData.shippingUpazila,
-          postCode: checkoutData.shippingPostCode,
+          city: checkoutData.shippingDistrict,
+          postalCode: checkoutData.shippingPostCode,
         },
-        paymentInfo: {
-          method: checkoutData.paymentMethod,
-        },
-        orderInfo: {
-          items: cartItems.map(item => ({
-            productId: item.productId?._id || item.productId || item.product?._id || item.product?.id,
-            quantity: item.quantity,
-            price: item.product?.price || item.productId?.price || item.price,
-            productName: item.product?.productName || item.product?.name || item.productId?.productName || item.productId?.name,
-          })),
-          subtotal: cartTotal,
-          deliveryFee: calculateDeliveryFee(),
-          total: calculateFinalTotal(),
-          notes: checkoutData.orderNotes,
-        }
+        paymentMethod: checkoutData.paymentMethod,
+        orderNotes: checkoutData.orderNotes,
+        deliveryFee: calculateDeliveryFee(),
       };
 
       console.log('Sending order data:', orderData);
 
+      console.log('CREATE_ORDER URL:', API_URLS.CREATE_ORDER);
       const response = await axios.post(API_URLS.CREATE_ORDER, orderData, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -261,35 +250,21 @@ const CheckoutScreen = ({ navigation, route }) => {
       console.log('Order placement response:', response.data);
 
       if (response.data.success || response.status === 201) {
-        Alert.alert(
-          'Order Placed Successfully!',
-          `Your order has been placed successfully.\nOrder ID: ${response.data.orderId || response.data.data?.orderId || 'N/A'}\nTotal: ৳${calculateFinalTotal()}`,
-          [
-            {
-              text: 'View Orders',
-              onPress: () => {
-                // Navigate to orders screen (you'll need to create this)
-                navigation.navigate('Orders', {
-                  userId,
-                  phoneNumber,
-                  userData,
-                  token
-                });
-              }
-            },
-            {
-              text: 'Continue Shopping',
-              onPress: () => {
-                navigation.navigate('Dashboard', {
-                  userId,
-                  phoneNumber,
-                  userData,
-                  token
-                });
-              }
-            }
-          ]
-        );
+        // Navigate to payment method flow; on success we can refresh cart in parent screens
+        const createdOrderId = response.data.data?.orderId || response.data.orderId || response.data.data?._id;
+        navigation.replace('PaymentMethod', {
+          orderId: createdOrderId,
+          token,
+          userId,
+          phoneNumber,
+          userData,
+          onPaymentSuccess: async () => {
+            try {
+              // Attempt to clear cart view state by re-fetch on next focus
+              setCartItems([]);
+            } catch {}
+          }
+        });
       } else {
         Alert.alert('Error', response.data.message || 'Failed to place order');
       }
@@ -473,7 +448,7 @@ const CheckoutScreen = ({ navigation, route }) => {
               <Text style={styles.totalValue}>৳{calculateFinalTotal()}</Text>
             </View>
           </View>
-        </View>
+        </View> 
       </ScrollView>
 
       {/* Place Order Button */}
