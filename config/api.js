@@ -60,7 +60,6 @@ const API_CONFIG = {
     GET_ORDER_DETAILS: '/api/v1/order',
     UPDATE_ORDER_STATUS: '/api/v1/order/status',
     CANCEL_ORDER: '/api/v1/order/cancel',
-    // Payment endpoints
     PAYMENTS_BASE: '/api/v1/payments',
     INITIATE_COD: '/api/v1/payments/initiate-cod',
     PAYMENT_DETAILS: '/api/v1/payments',
