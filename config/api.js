@@ -40,8 +40,8 @@ const API_CONFIG = {
     UPLOAD_IMAGE: '/api/v1/upload-image',
     UPDATE_PROFILE_IMAGE: '/api/v1/profile/image',
     PROFILE_IMAGE: '/api/v1/profile/image',
-    PRODUCTS: '/api/v1/consumer/products',
-    PRODUCT_DETAILS: '/api/v1/consumer/products',
+    PRODUCTS: '/api/v1/products',
+    PRODUCT_DETAILS: '/api/v1/products',
     CATEGORIES: '/api/v1/consumer/view-all-category',
     CREATE_REVIEW: '/api/v1/consumer/create-review',
     

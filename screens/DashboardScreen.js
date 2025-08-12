@@ -185,7 +185,7 @@ const DashboardScreen = ({ navigation, route }) => {
         });
       });
       
-      if (response.data.message === 'Products fetched successfully') {
+      if (response.data.products && Array.isArray(response.data.products)) {
         // Sort products by creation date (newest first)
         const sortedProducts = (response.data.products || []).sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
@@ -195,7 +195,7 @@ const DashboardScreen = ({ navigation, route }) => {
         setAllProducts(sortedProducts);
         setProducts(sortedProducts);
       } else {
-        console.error('Failed to fetch products:', response.data.message);
+        console.error('Failed to fetch products:', response.data.message || 'Invalid response format');
         // Fallback to sample products if API fails
         const sampleProducts = getSampleProducts();
         setAllProducts(sampleProducts);

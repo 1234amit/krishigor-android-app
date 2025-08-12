@@ -5,9 +5,20 @@ import axios from 'axios';
 import { API_URLS } from '../config/api';
 
 const PaymentMethodScreen = ({ navigation, route }) => {
-  const { orderId, token, onPaymentSuccess } = route.params || {};
+  const { orderId, token, userId, phoneNumber, userData, onPaymentSuccess } = route.params || {};
   const [submitting, setSubmitting] = useState(false);
   const [method, setMethod] = useState('cash_on_delivery');
+
+  // Debug logging to track authentication data
+  React.useEffect(() => {
+    console.log('PaymentMethodScreen - Received route params:', {
+      orderId,
+      userId,
+      phoneNumber: phoneNumber ? '***' + phoneNumber.slice(-4) : null,
+      userData: userData ? 'Present' : 'Missing',
+      token: token ? 'Present' : 'Missing'
+    });
+  }, [orderId, userId, phoneNumber, userData, token]);
 
   const handleProceed = async () => {
     if (!orderId || !token) {
@@ -33,9 +44,13 @@ const PaymentMethodScreen = ({ navigation, route }) => {
         if (typeof onPaymentSuccess === 'function') {
           try { onPaymentSuccess(); } catch {}
         }
-        navigation.replace('PaymentSuccess', {
+        navigation.navigate('PaymentSuccess', {
           orderId,
           paymentId: res.data.data?.paymentId,
+          userId,
+          phoneNumber,
+          userData,
+          token
         });
       } else {
         Alert.alert('Payment', res.data?.message || 'Failed to initiate payment');

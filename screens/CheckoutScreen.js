@@ -252,7 +252,17 @@ const CheckoutScreen = ({ navigation, route }) => {
       if (response.data.success || response.status === 201) {
         // Navigate to payment method flow; on success we can refresh cart in parent screens
         const createdOrderId = response.data.data?.orderId || response.data.orderId || response.data.data?._id;
-        navigation.replace('PaymentMethod', {
+        
+        // Debug logging for navigation data
+        console.log('CheckoutScreen - Navigating to PaymentMethod with data:', {
+          orderId: createdOrderId,
+          userId,
+          phoneNumber: phoneNumber ? '***' + phoneNumber.slice(-4) : null,
+          userData: userData ? 'Present' : 'Missing',
+          token: token ? 'Present' : 'Missing'
+        });
+        
+        navigation.navigate('PaymentMethod', {
           orderId: createdOrderId,
           token,
           userId,

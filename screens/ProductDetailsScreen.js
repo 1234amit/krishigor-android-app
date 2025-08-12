@@ -128,7 +128,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         });
       });
       
-      if (response.data.message === 'Product fetched successfully') {
+      if (response.data.message === 'Product fetched') {
         setProduct(response.data.product);
       } else {
         console.error('Failed to fetch product:', response.data.message);
@@ -166,7 +166,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         });
       });
       
-      if (response.data.message === 'Products fetched successfully') {
+      if (response.data.products && Array.isArray(response.data.products)) {
         // Get 4 similar products (excluding current product)
         const similar = (response.data.products || [])
           .filter(p => p._id !== productId)
@@ -688,7 +688,9 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         <View style={styles.locationContainer}>
           <Ionicons name="location" size={16} color="#4CAF50" />
           <Text style={styles.locationText}>
-            {product.producer?.address || 'Location not available'}
+            {product.producer?.division ? `Division: ${product.producer.division}` : 'Division: Not available'}
+            {product.producer?.district ? `, District: ${product.producer.district}` : ', District: Not available'}
+            {product.producer?.thana ? `, Thana: ${product.producer.thana}` : ', Thana: Not available'}
           </Text>
         </View>
 

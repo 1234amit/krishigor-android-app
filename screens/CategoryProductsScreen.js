@@ -35,7 +35,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
         }
       });
       
-      if (response.data.message === 'Products fetched successfully') {
+      if (response.data.products && Array.isArray(response.data.products)) {
         const allProductsData = response.data.products || [];
         setAllProducts(allProductsData);
         
@@ -49,7 +49,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
         
         setProducts(filteredProducts);
       } else {
-        console.error('Failed to fetch products:', response.data.message);
+        console.error('Failed to fetch products:', response.data.message || 'Invalid response format');
         // Fallback to sample products if API fails
         const sampleProducts = getSampleProducts();
         const filteredSampleProducts = sampleProducts.filter(product => 

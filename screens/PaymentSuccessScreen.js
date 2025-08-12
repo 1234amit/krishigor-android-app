@@ -1,9 +1,74 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+// Utility function to validate authentication data
+const validateAuthData = (authData) => {
+  const { userId, phoneNumber, userData, token } = authData;
+  const missing = [];
+  
+  if (!token) missing.push('token');
+  if (!userId) missing.push('userId');
+  if (!phoneNumber) missing.push('phoneNumber');
+  if (!userData) missing.push('userData');
+  
+  return {
+    isValid: missing.length === 0,
+    missing,
+    authData
+  };
+};
 
 const PaymentSuccessScreen = ({ navigation, route }) => {
   const { orderId, userId, phoneNumber, userData, token } = route.params || {};
+
+  // Debug logging to track authentication data
+  React.useEffect(() => {
+    console.log('PaymentSuccessScreen - Received route params:', {
+      orderId,
+      userId,
+      phoneNumber: phoneNumber ? '***' + phoneNumber.slice(-4) : null,
+      userData: userData ? 'Present' : 'Missing',
+      token: token ? 'Present' : 'Missing'
+    });
+  }, [orderId, userId, phoneNumber, userData, token]);
+
+  const handleGoToDashboard = () => {
+    // Validate authentication data using utility function
+    const validation = validateAuthData({ userId, phoneNumber, userData, token });
+    
+    if (!validation.isValid) {
+      console.warn('Missing authentication data in PaymentSuccessScreen:', validation.missing);
+      Alert.alert(
+        'Authentication Error',
+        `Missing required data: ${validation.missing.join(', ')}. Please login again.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to login screen if authentication data is missing
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    // Navigate to Dashboard with all authentication data
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Dashboard',
+          params: { userId, phoneNumber, userData, token },
+        },
+      ],
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -18,17 +83,7 @@ const PaymentSuccessScreen = ({ navigation, route }) => {
 
       <TouchableOpacity
         style={styles.primary}
-        onPress={() =>
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'Dashboard',
-                params: { userId, phoneNumber, userData, token },
-              },
-            ],
-          })
-        }
+        onPress={handleGoToDashboard}
       >
         <Text style={styles.primaryText}>Go to Dashboard</Text>
       </TouchableOpacity>
