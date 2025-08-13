@@ -22,12 +22,15 @@ const CategoryProductsScreen = ({ navigation, route }) => {
   const { category, userId, phoneNumber, userData, token } = route.params || {};
 
   useEffect(() => {
+    console.log('CategoryProductsScreen - Category received:', category);
     fetchProducts();
   }, [category]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      console.log('Fetching products for category:', category?.name, 'ID:', category?._id);
+      
       const response = await axios.get(API_URLS.PRODUCTS, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -35,26 +38,94 @@ const CategoryProductsScreen = ({ navigation, route }) => {
         }
       });
       
+      console.log('API Response:', response.data);
+      
       if (response.data.products && Array.isArray(response.data.products)) {
         const allProductsData = response.data.products || [];
         setAllProducts(allProductsData);
         
-        // Filter products by category
+        console.log('Total products received:', allProductsData.length);
+        if (allProductsData.length > 0) {
+          console.log('Sample product structure:', JSON.stringify(allProductsData[0], null, 2));
+        }
+        
+        // Enhanced category filtering with multiple strategies
         const filteredProducts = allProductsData.filter(product => {
-          const productCategory = product.category || product.categoryName || product.categoryId;
-          return productCategory === category.name || 
-                 productCategory === category._id ||
-                 product.categoryId === category._id;
+          // Get all possible category fields from the product
+          const productCategoryFields = {
+            category: product.category,
+            categoryName: product.categoryName,
+            categoryId: product.categoryId,
+            category_id: product.category_id,
+            categoryName: product.categoryName,
+            // Add any other possible category field names
+          };
+          
+          console.log('Product:', product.productName || product.name);
+          console.log('Product category fields:', productCategoryFields);
+          console.log('Looking for category:', category?.name, 'or ID:', category?._id);
+          
+          // Strategy 1: Direct ID match
+          if (product.categoryId === category?._id || 
+              product.category_id === category?._id ||
+              product.category === category?._id) {
+            console.log('✅ Matched by ID');
+            return true;
+          }
+          
+          // Strategy 2: Direct name match
+          if (product.category === category?.name || 
+              product.categoryName === category?.name) {
+            console.log('✅ Matched by name');
+            return true;
+          }
+          
+          // Strategy 3: Case-insensitive name match
+          if (typeof product.category === 'string' && 
+              typeof category?.name === 'string' && 
+              product.category.toLowerCase() === category.name.toLowerCase()) {
+            console.log('✅ Matched by case-insensitive name');
+            return true;
+          }
+          
+          // Strategy 4: Check if category name contains the product category or vice versa
+          if (typeof product.category === 'string' && 
+              typeof category?.name === 'string') {
+            if (product.category.toLowerCase().includes(category.name.toLowerCase()) ||
+                category.name.toLowerCase().includes(product.category.toLowerCase())) {
+              console.log('✅ Matched by partial name');
+              return true;
+            }
+          }
+          
+          console.log('❌ No match found');
+          return false;
         });
         
+        console.log('Filtered products count:', filteredProducts.length);
         setProducts(filteredProducts);
+        
+        // If no products found, try to understand why
+        if (filteredProducts.length === 0) {
+          console.log('🔍 Debugging: No products matched. Let\'s see what we have:');
+          allProductsData.forEach((product, index) => {
+            console.log(`Product ${index + 1}:`, {
+              name: product.productName || product.name,
+              category: product.category,
+              categoryId: product.categoryId,
+              category_id: product.category_id,
+              categoryName: product.categoryName
+            });
+          });
+        }
       } else {
         console.error('Failed to fetch products:', response.data.message || 'Invalid response format');
         // Fallback to sample products if API fails
         const sampleProducts = getSampleProducts();
         const filteredSampleProducts = sampleProducts.filter(product => 
-          product.category === category.name || product.categoryId === category._id
+          product.category === category?.name || product.categoryId === category?._id
         );
+        console.log('Using sample products, filtered count:', filteredSampleProducts.length);
         setProducts(filteredSampleProducts);
       }
     } catch (error) {
@@ -62,8 +133,9 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       // Fallback to sample products if API fails
       const sampleProducts = getSampleProducts();
       const filteredSampleProducts = sampleProducts.filter(product => 
-        product.category === category.name || product.categoryId === category._id
+        product.category === category?.name || product.categoryId === category?._id
       );
+      console.log('Using sample products due to error, filtered count:', filteredSampleProducts.length);
       setProducts(filteredSampleProducts);
     } finally {
       setLoading(false);
@@ -76,7 +148,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       _id: '1',
       productName: 'Fresh Rice',
       description: 'Premium quality rice from local farms',
-      price: '৳45',
+      price: '45',
       rating: '4.5',
       discount: '20% Off',
       image: null,
@@ -87,7 +159,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       _id: '2',
       productName: 'Organic Corn',
       description: 'Sweet organic corn kernels',
-      price: '৳25',
+      price: '25',
       rating: '4.8',
       discount: '15% Off',
       image: null,
@@ -98,7 +170,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       _id: '3',
       productName: 'Fresh Tomatoes',
       description: 'Red ripe tomatoes from garden',
-      price: '৳30',
+      price: '30',
       rating: '4.6',
       discount: '10% Off',
       image: null,
@@ -109,7 +181,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       _id: '4',
       productName: 'Fresh Garlic',
       description: 'Organic garlic bulbs',
-      price: '৳35',
+      price: '35',
       rating: '4.7',
       discount: '12% Off',
       image: null,
@@ -120,7 +192,7 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       _id: '5',
       productName: 'Poultry Egg',
       description: 'Fresh farm eggs',
-      price: '৳10',
+      price: '10',
       rating: '4.9',
       discount: '8% Off',
       image: null,
@@ -131,12 +203,35 @@ const CategoryProductsScreen = ({ navigation, route }) => {
       _id: '6',
       productName: 'Fresh Milk',
       description: 'Pure cow milk',
-      price: '৳60',
+      price: '60',
       rating: '4.4',
       discount: '18% Off',
       image: null,
       category: 'Farm',
       categoryId: 'farm',
+    },
+    // Add more sample products for better testing
+    {
+      _id: '7',
+      productName: 'Fresh Potatoes',
+      description: 'Organic potatoes from local farms',
+      price: '40',
+      rating: '4.3',
+      discount: '5% Off',
+      image: null,
+      category: 'Vegetable',
+      categoryId: 'vegetable',
+    },
+    {
+      _id: '8',
+      productName: 'Brown Rice',
+      description: 'Healthy brown rice variety',
+      price: '55',
+      rating: '4.7',
+      discount: '15% Off',
+      image: null,
+      category: 'Rice',
+      categoryId: 'rice',
     },
   ];
 
@@ -211,6 +306,28 @@ const CategoryProductsScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Debug Info - Remove this in production
+      <View style={styles.debugContainer}>
+        <Text style={styles.debugText}>Category: {category?.name} (ID: {category?._id})</Text>
+        <Text style={styles.debugText}>Total Products: {allProducts.length}</Text>
+        <Text style={styles.debugText}>Filtered Products: {products.length}</Text>
+        
+        <TouchableOpacity 
+          style={styles.testButton}
+          onPress={() => {
+            console.log('🧪 Testing with sample data...');
+            const sampleProducts = getSampleProducts();
+            const filteredSampleProducts = sampleProducts.filter(product => 
+              product.category === category?.name || product.categoryId === category?._id
+            );
+            console.log('Sample products filtered:', filteredSampleProducts);
+            setProducts(filteredSampleProducts);
+          }}
+        >
+          <Text style={styles.testButtonText}>Test with Sample Data</Text>
+        </TouchableOpacity>
+      </View> */}
+
       {/* Content */}
       <View style={styles.content}>
         {loading ? (
@@ -273,6 +390,18 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     padding: 8,
+  },
+  debugContainer: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
   },
   content: {
     flex: 1,
@@ -401,6 +530,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   backToCategoriesText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  testButton: {
+    backgroundColor: '#007bff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  testButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',

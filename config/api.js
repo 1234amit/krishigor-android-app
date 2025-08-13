@@ -42,8 +42,9 @@ const API_CONFIG = {
     PROFILE_IMAGE: '/api/v1/profile/image',
     PRODUCTS: '/api/v1/products',
     PRODUCT_DETAILS: '/api/v1/products',
-    CATEGORIES: '/api/v1/consumer/view-all-category',
+    CATEGORIES: '/api/v1/products/categories',
     CREATE_REVIEW: '/api/v1/consumer/create-review',
+    ADD_PRODUCT: '/api/v1/producer/add-product',
     
     ADD_TO_WISHLIST: '/api/v1/wishlist/add',
     GET_WISHLIST: '/api/v1/wishlist/',
@@ -87,6 +88,7 @@ export const API_URLS = {
   PRODUCT_DETAILS: getApiUrl(API_CONFIG.ENDPOINTS.PRODUCT_DETAILS),
   CATEGORIES: getApiUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
   CREATE_REVIEW: getApiUrl(API_CONFIG.ENDPOINTS.CREATE_REVIEW),
+  ADD_PRODUCT: getApiUrl(API_CONFIG.ENDPOINTS.ADD_PRODUCT),
   // Wishlist URLs
   ADD_TO_WISHLIST: getApiUrl(API_CONFIG.ENDPOINTS.ADD_TO_WISHLIST),
   GET_WISHLIST: getApiUrl(API_CONFIG.ENDPOINTS.GET_WISHLIST),

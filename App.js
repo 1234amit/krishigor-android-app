@@ -22,6 +22,7 @@ import CheckoutScreen from './screens/CheckoutScreen';
 import OrdersScreen from './screens/OrdersScreen';
 import PaymentMethodScreen from './screens/PaymentMethodScreen';
 import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
+import AddProductScreen from './screens/AddProductScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +66,7 @@ export default function App() {
          <Stack.Screen name="Orders" component={OrdersScreen} />
          <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
          <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+         <Stack.Screen name="AddProduct" component={AddProductScreen} />
       </Stack.Navigator>
       <StatusBar style="auto" />
       <Toast />

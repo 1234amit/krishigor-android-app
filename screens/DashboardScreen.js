@@ -653,6 +653,31 @@ const DashboardScreen = ({ navigation, route }) => {
           </View>
         </View>
 
+        {/* Add Product Button for Producers/Sellers */}
+        {(userData?.role === 'producer' || 
+          userData?.role === 'supersaler' || 
+          userData?.role === 'wholesaler' || 
+          userData?.userType === 'seller' || 
+          userData?.userType === 'producer') && (
+          <View style={styles.addProductSection}>
+            <TouchableOpacity 
+              style={styles.addProductButton}
+              onPress={() => navigation.navigate('AddProduct', {
+                userId,
+                phoneNumber,
+                userData,
+                token
+              })}
+            >
+              <Ionicons name="add-circle" size={24} color="white" />
+              <Text style={styles.addProductButtonText}>Add New Product</Text>
+            </TouchableOpacity>
+            <Text style={styles.addProductSubtext}>
+              Sell your products to customers
+            </Text>
+          </View>
+        )}
+
         {/* Categories */}
         <View style={styles.categoriesSection}>
           <View style={styles.sectionHeader}>
@@ -1447,6 +1472,34 @@ const styles = StyleSheet.create({
   bannerImageStyle: {
     width: '100%',
     height: '100%',
+  },
+  addProductSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  addProductButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  addProductButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  addProductSubtext: {
+    marginTop: 5,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 
