@@ -11,6 +11,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_URLS } from '../config/api';
+import { useCart } from '../context/CartContext';
 
 const OTPScreen = ({ navigation, route }) => {
   const [otp, setOtp] = useState(['', '', '', '', '']);
@@ -18,6 +21,7 @@ const OTPScreen = ({ navigation, route }) => {
   const [canResend, setCanResend] = useState(false);
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef([]);
+  const { setAuthToken } = useCart();
   
   // Get user data from route params
   const { userId, phoneNumber, userData, token } = route.params || {};
@@ -105,6 +109,7 @@ const OTPScreen = ({ navigation, route }) => {
               text: 'OK',
               onPress: () => {
                 console.log('Navigating to Dashboard with userId:', userId, 'phoneNumber:', phoneNumber, 'userData:', userData, 'token:', token);
+                setAuthToken(token); // Set the auth token in the context
                 navigation.navigate('Dashboard', { 
                   userId,
                   phoneNumber,

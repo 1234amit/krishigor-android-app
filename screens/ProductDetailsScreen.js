@@ -15,9 +15,11 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { API_URLS } from '../config/api';
 import { handleNetworkError, retryRequest, showNetworkDiagnostics } from '../utils/networkUtils';
+import { useCart } from '../context/CartContext';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +38,17 @@ const ProductDetailsScreen = ({ navigation, route }) => {
     reviewText: '',
   });
   const { productId, userId, phoneNumber, userData, token } = route.params || {};
+  const { incrementCartCount, cartCount, fetchCartCount } = useCart();
+
+  // Refresh cart count when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (token) {
+        console.log('ProductDetails focused, refreshing cart count...');
+        fetchCartCount();
+      }
+    }, [token, fetchCartCount])
+  );
 
   // Sample FAQs data
   const faqs = [
@@ -426,13 +439,9 @@ const ProductDetailsScreen = ({ navigation, route }) => {
           {
             text: 'OK',
             onPress: () => {
-              // Navigate to cart screen after successful addition
-              navigation.navigate('Cart', {
-                userId,
-                phoneNumber,
-                userData,
-                token
-              });
+              // Increment cart count immediately for real-time feedback
+              incrementCartCount();
+              // Stay on ProductDetailsScreen - no navigation needed
             }
           }
         ]);
@@ -856,11 +865,21 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         setActiveBottomTab(tabName);
       }}
     >
-      <Ionicons
-        name={icon}
-        size={24}
-        color={activeBottomTab === tabName ? '#4CAF50' : '#666'}
-      />
+      <View style={styles.iconContainer}>
+        <Ionicons
+          name={icon}
+          size={24}
+          color={activeBottomTab === tabName ? '#4CAF50' : '#666'}
+        />
+        {/* Show cart count badge only for cart tab */}
+        {tabName === 'cart' && cartCount > 0 && (
+          <View style={styles.cartBadge}>
+            <Text style={styles.cartBadgeText}>
+              {cartCount > 99 ? '99+' : cartCount}
+            </Text>
+          </View>
+        )}
+      </View>
       <Text
         style={[
           styles.tabLabel,
@@ -952,23 +971,31 @@ const ProductDetailsScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="chevron-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Details</Text>
-        <TouchableOpacity 
-          style={styles.networkButton}
-          onPress={showNetworkDiagnostics}
-        >
-          <Ionicons name="wifi" size={20} color="white" />
-        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Product Details</Text>
+        
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.wishlistButton}
+            onPress={toggleWishlist}
+          >
+            <Ionicons 
+              name={isWishlisted ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isWishlisted ? "#FF4444" : "#333"} 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -1525,6 +1552,29 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   tabLabel: {
     fontSize: 12,

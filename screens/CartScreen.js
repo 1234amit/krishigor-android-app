@@ -1,24 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
+  Image,
+  Alert,
+  ActivityIndicator,
+  Dimensions,
+  TextInput,
   StatusBar,
   Platform,
-  ScrollView,
-  Image,
-  ActivityIndicator,
-  Alert,
-  Dimensions,
+  Modal,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { API_URLS } from '../config/api';
 import { handleNetworkError, retryRequest, showNetworkDiagnostics } from '../utils/networkUtils';
+import { useCart } from '../context/CartContext';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 // Helper function to consistently extract productId from cart items
 const extractProductId = (item) => {
@@ -32,6 +35,13 @@ const CartScreen = ({ navigation, route }) => {
   const [activeBottomTab, setActiveBottomTab] = useState('cart');
   const [lastUpdateTime, setLastUpdateTime] = useState(0);
   const { userId, phoneNumber, userData, token } = route.params || {};
+  const { decrementCartCount, updateCartCount, cartCount, fetchCartCount } = useCart();
+
+  // Function to update cart count based on current cart items
+  const syncCartCount = () => {
+    const totalQuantity = cartItems.reduce((total, item) => total + (parseInt(item.quantity) || 0), 0);
+    updateCartCount(totalQuantity);
+  };
 
   useEffect(() => {
     if (token) {
@@ -42,17 +52,19 @@ const CartScreen = ({ navigation, route }) => {
     }
   }, [token]);
 
-  // Refresh cart items when screen comes into focus
+  // Refresh cart items and cart count when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (token) {
-        console.log('Cart screen focused, refreshing cart items...');
+        console.log('Cart screen focused, refreshing cart items and count...');
         // Only refresh if not currently updating quantity to avoid conflicts
         if (!updatingQuantity) {
           fetchCartItems();
         }
+        // Always refresh cart count for real-time updates
+        fetchCartCount();
       }
-    }, [token, updatingQuantity])
+    }, [token, updatingQuantity, fetchCartCount])
   );
 
   // Test API endpoint
@@ -212,6 +224,10 @@ const CartScreen = ({ navigation, route }) => {
       }
 
       setCartItems(Array.isArray(items) ? items : []);
+      // Sync cart count with actual cart items for immediate update
+      syncCartCount();
+      // Also fetch from backend to ensure consistency
+      fetchCartCount();
     } catch (error) {
       const { errorMessage, shouldRetry } = handleNetworkError(error, 'Fetching cart items');
 
@@ -253,6 +269,10 @@ const CartScreen = ({ navigation, route }) => {
           }
 
           setCartItems(Array.isArray(items) ? items : []);
+          // Sync cart count with actual cart items for immediate update
+          syncCartCount();
+          // Also fetch from backend to ensure consistency
+          fetchCartCount();
           return;
         } catch (retryError) {
           console.error('Retry also failed:', retryError);
@@ -368,6 +388,11 @@ const CartScreen = ({ navigation, route }) => {
         setTimeout(async () => {
           await fetchCartItems();
         }, 100);
+        
+        // Update cart count immediately for real-time UX
+        syncCartCount();
+        // Also fetch from backend to ensure consistency
+        fetchCartCount();
       } else {
         Alert.alert('Error', response.data.message || 'Failed to update quantity');
       }
@@ -451,6 +476,10 @@ const CartScreen = ({ navigation, route }) => {
           await fetchCartItems();
         }, 100);
         Alert.alert('Success', 'Item removed from cart');
+        // Update cart count immediately for real-time feedback
+        decrementCartCount();
+        // Also sync with actual cart items
+        syncCartCount();
       } else {
         Alert.alert('Error', response.data.message || 'Failed to remove item');
       }
@@ -682,11 +711,21 @@ const CartScreen = ({ navigation, route }) => {
         setActiveBottomTab(tabName);
       }}
     >
-      <Ionicons
-        name={icon}
-        size={24}
-        color={activeBottomTab === tabName ? '#4CAF50' : '#666'}
-      />
+      <View style={styles.iconContainer}>
+        <Ionicons
+          name={icon}
+          size={24}
+          color={activeBottomTab === tabName ? '#4CAF50' : '#666'}
+        />
+        {/* Show cart count badge only for cart tab */}
+        {tabName === 'cart' && cartCount > 0 && (
+          <View style={styles.cartBadge}>
+            <Text style={styles.cartBadgeText}>
+              {cartCount > 99 ? '99+' : cartCount}
+            </Text>
+          </View>
+        )}
+      </View>
       <Text
         style={[
           styles.tabLabel,
@@ -1086,6 +1125,29 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   tabLabel: {
     fontSize: 12,

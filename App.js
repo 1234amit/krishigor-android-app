@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
+import { CartProvider } from './context/CartContext';
 import SplashScreen from './screens/SplashScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import LoginScreen from './screens/LoginScreen';
@@ -47,30 +48,32 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="OTP" component={OTPScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
-        <Stack.Screen name="AllProducts" component={AllProductsScreen} />
-        <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
-        <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
-        <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
-        <Stack.Screen name="Wishlist" component={WishlistScreen} />
-        <Stack.Screen name="Cart" component={CartScreen} />
-         <Stack.Screen name="Checkout" component={CheckoutScreen} />
-         <Stack.Screen name="Orders" component={OrdersScreen} />
-         <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
-         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
-         <Stack.Screen name="AddProduct" component={AddProductScreen} />
-      </Stack.Navigator>
-      <StatusBar style="auto" />
-      <Toast />
-    </NavigationContainer>
+    <CartProvider>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="OTP" component={OTPScreen} />
+          <Stack.Screen name="Dashboard" component={DashboardScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+          <Stack.Screen name="AllProducts" component={AllProductsScreen} />
+          <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+          <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
+          <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+          <Stack.Screen name="Wishlist" component={WishlistScreen} />
+          <Stack.Screen name="Cart" component={CartScreen} />
+           <Stack.Screen name="Checkout" component={CheckoutScreen} />
+           <Stack.Screen name="Orders" component={OrdersScreen} />
+           <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
+           <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+           <Stack.Screen name="AddProduct" component={AddProductScreen} />
+        </Stack.Navigator>
+        <StatusBar style="auto" />
+        <Toast />
+      </NavigationContainer>
+    </CartProvider>
   );
 }
 

@@ -14,9 +14,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { API_URLS } from '../config/api';
 import { handleNetworkError, retryRequest, showNetworkDiagnostics } from '../utils/networkUtils';
+import { useCart } from '../context/CartContext';
 import defaultCategoryImage from '../assets/20945573.jpg';
 import bannerImage from '../assets/Frame-1.png';
 
@@ -35,6 +37,24 @@ const DashboardScreen = ({ navigation, route }) => {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const productsScrollViewRef = useRef(null);
   const { userId, phoneNumber, userData, token } = route.params || {};
+  const { cartCount, setAuthToken, fetchCartCount } = useCart();
+
+  // Set auth token in context when component mounts
+  useEffect(() => {
+    if (token) {
+      setAuthToken(token);
+    }
+  }, [token, setAuthToken]);
+
+  // Refresh cart count when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (token) {
+        console.log('Dashboard focused, refreshing cart count...');
+        fetchCartCount();
+      }
+    }, [token, fetchCartCount])
+  );
 
   // Fetch categories and products from API
   useEffect(() => {
@@ -540,11 +560,21 @@ const DashboardScreen = ({ navigation, route }) => {
         }
       }}
     >
-      <Ionicons
-        name={icon}
-        size={24}
-        color={activeTab === tabName ? '#4CAF50' : '#666'}
-      />
+      <View style={styles.iconContainer}>
+        <Ionicons
+          name={icon}
+          size={24}
+          color={activeTab === tabName ? '#4CAF50' : '#666'}
+        />
+        {/* Show cart count badge only for cart tab */}
+        {tabName === 'cart' && cartCount > 0 && (
+          <View style={styles.cartBadge}>
+            <Text style={styles.cartBadgeText}>
+              {cartCount > 99 ? '99+' : cartCount}
+            </Text>
+          </View>
+        )}
+      </View>
       <Text
         style={[
           styles.tabLabel,
@@ -1369,6 +1399,29 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   tabLabel: {
     fontSize: 12,

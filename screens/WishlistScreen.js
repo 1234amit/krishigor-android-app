@@ -11,10 +11,15 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URLS } from '../config/api';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCart } from '../context/CartContext';
+
+const { width, height } = Dimensions.get('window');
 
 const WishlistScreen = ({ navigation, route }) => {
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -23,6 +28,7 @@ const WishlistScreen = ({ navigation, route }) => {
   const [categories, setCategories] = useState([]);
   const [activeBottomTab, setActiveBottomTab] = useState('wishlist');
   const { userId, phoneNumber, userData, token } = route.params || {};
+  const { cartCount } = useCart();
 
   useEffect(() => {
     // Check if we have valid authentication data
@@ -411,8 +417,12 @@ const WishlistScreen = ({ navigation, route }) => {
             token
           });
         } else if (tabName === 'cart') {
-          // Navigate to cart screen (to be implemented)
-          console.log('Cart pressed');
+          navigation.navigate('Cart', {
+            userId,
+            phoneNumber,
+            userData,
+            token
+          });
         } else if (tabName === 'wishlist') {
           // Already on wishlist screen
           setActiveBottomTab(tabName);
@@ -431,11 +441,21 @@ const WishlistScreen = ({ navigation, route }) => {
         }
       }}
     >
-      <Ionicons
-        name={icon}
-        size={24}
-        color={activeBottomTab === tabName ? '#4CAF50' : '#666'}
-      />
+      <View style={styles.iconContainer}>
+        <Ionicons
+          name={icon}
+          size={24}
+          color={activeBottomTab === tabName ? '#4CAF50' : '#666'}
+        />
+        {/* Show cart count badge only for cart tab */}
+        {tabName === 'cart' && cartCount > 0 && (
+          <View style={styles.cartBadge}>
+            <Text style={styles.cartBadgeText}>
+              {cartCount > 99 ? '99+' : cartCount}
+            </Text>
+          </View>
+        )}
+      </View>
       <Text
         style={[
           styles.tabLabel,
@@ -808,6 +828,29 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   tabLabel: {
     fontSize: 12,
