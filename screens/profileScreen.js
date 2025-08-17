@@ -18,6 +18,7 @@ import axios from 'axios';
 import { API_URLS } from '../config/api';
 import { pickImage, imageToBase64, getImageSource } from '../utils/imageUpload';
 import { handleNetworkError, retryRequest, showNetworkDiagnostics } from '../utils/networkUtils';
+import { useFocusEffect } from '@react-navigation/native';
 
 const ProfileScreen = ({ navigation, route }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +28,10 @@ const ProfileScreen = ({ navigation, route }) => {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profileImage, setProfileImage] = useState(userData?.profileImage || null);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [countsLoading, setCountsLoading] = useState(false);
   const { userId, phoneNumber, userData, token } = route.params || {};
 
   // Determine user type (seller or buyer) - you can modify this logic based on your backend
@@ -109,12 +114,135 @@ const ProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  // Fetch wishlist count
+  const fetchWishlistCount = async () => {
+    setCountsLoading(true);
+    try {
+      if (!token) return;
+      
+      const response = await axios.get(API_URLS.GET_WISHLIST, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        const items = response.data.data?.items || response.data.data || [];
+        setWishlistCount(Array.isArray(items) ? items.length : 0);
+      }
+    } catch (error) {
+      console.error('Error fetching wishlist count:', error);
+      setWishlistCount(0);
+    } finally {
+      setCountsLoading(false);
+    }
+  };
+
+  // Fetch order count
+  const fetchOrderCount = async () => {
+    setCountsLoading(true);
+    try {
+      if (!token) return;
+      
+      const response = await axios.get(API_URLS.GET_ORDERS, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        const orders = response.data.data?.orders || response.data.orders || [];
+        setOrderCount(Array.isArray(orders) ? orders.length : 0);
+      }
+    } catch (error) {
+      console.error('Error fetching order count:', error);
+      setOrderCount(0);
+    } finally {
+      setCountsLoading(false);
+    }
+  };
+
+  // Fetch user's review count
+  const fetchReviewCount = async () => {
+    try {
+      console.log('fetchReviewCount called with token:', token ? 'Token present' : 'No token');
+      console.log('fetchReviewCount called with userData:', userData);
+      
+      if (!token) {
+        console.log('No token available, returning early');
+        return;
+      }
+      
+      // Get the username from userData or use a default
+      const username = userData?.userName || userData?.username || userData?.name || 'Amit';
+      
+      console.log('UserData available fields:', {
+        userName: userData?.userName,
+        username: userData?.username,
+        name: userData?.name
+      });
+      console.log('Fetching reviews for username:', username);
+      console.log('Full API URL:', `${API_URLS.GET_USER_REVIEWS}/${username}`);
+      
+      const response = await axios.get(`${API_URLS.GET_USER_REVIEWS}/${username}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Review API response:', response.data);
+      
+      // The API returns data directly, not under success property
+      if (response.data && response.data.totalReviews !== undefined) {
+        const totalReviews = response.data.totalReviews;
+        setReviewCount(totalReviews);
+        
+        console.log('Fetched review count:', totalReviews);
+      } else {
+        console.log('No totalReviews found in response');
+        setReviewCount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching review count:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      setReviewCount(0);
+    }
+  };
+
   // Fetch profile data when component mounts
   React.useEffect(() => {
     if (token) {
       fetchUserProfile();
+      fetchWishlistCount();
+      fetchOrderCount();
     }
   }, [token]);
+
+  // Fetch review count when userData is available
+  React.useEffect(() => {
+    if (token && userData) {
+      fetchReviewCount();
+    }
+  }, [token, userData]);
+
+  // Refresh counts when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (token && userData) {
+        fetchWishlistCount();
+        fetchOrderCount();
+        fetchReviewCount();
+      }
+    }, [token, userData])
+  );
 
   // Update form data when userData changes
   React.useEffect(() => {
@@ -515,17 +643,29 @@ const ProfileScreen = ({ navigation, route }) => {
       {/* Statistics Section */}
       <View style={styles.statsSection}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>35</Text>
+          {countsLoading ? (
+            <ActivityIndicator size="small" color="#4CAF50" />
+          ) : (
+            <Text style={styles.statNumber}>{wishlistCount}</Text>
+          )}
           <Text style={styles.statLabel}>Your Wishlist</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>45</Text>
+          {countsLoading ? (
+            <ActivityIndicator size="small" color="#4CAF50" />
+          ) : (
+            <Text style={styles.statNumber}>{orderCount}</Text>
+          )}
           <Text style={styles.statLabel}>Your Orders</Text>
         </View>
         <View style={styles.statItem}>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={styles.statNumber}>4.7</Text>
+            {countsLoading ? (
+              <ActivityIndicator size="small" color="#4CAF50" />
+            ) : (
+              <Text style={styles.statNumber}>{reviewCount}</Text>
+            )}
           </View>
           <Text style={styles.statLabel}>Your Reviews</Text>
         </View>
@@ -544,10 +684,24 @@ const ProfileScreen = ({ navigation, route }) => {
               token
             })
           },
-          { icon: 'location', title: 'Shipping Address', onPress: () => {} },
-          { icon: 'heart', title: 'My Wishlist', onPress: () => {} },
-          { icon: 'clipboard', title: 'Order History', onPress: () => {} },
-          { icon: 'shield', title: 'Privacy & Policy', onPress: () => {} },
+          { icon: 'heart', title: 'My Wishlist', onPress: () => navigation.navigate('Wishlist', {
+            userId,
+            phoneNumber,
+            userData,
+            token
+          }) },
+          { icon: 'clipboard', title: 'Order History', onPress: () => navigation.navigate('OrderHistory', {
+            userId,
+            phoneNumber,
+            userData,
+            token
+          }) },
+          { icon: 'shield', title: 'Privacy & Policy', onPress: () => navigation.navigate('PrivacyPolicy', {
+            userId,
+            phoneNumber,
+            userData,
+            token
+          }) },
           { icon: 'log-out-outline', title: 'Logout', onPress: () => setShowLogoutModal(true), showArrow: false }
         ].map((item, index) => (
           <View key={`menu-item-${index}`}>
@@ -583,7 +737,26 @@ const ProfileScreen = ({ navigation, route }) => {
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={() => {
+            if (token) {
+              fetchUserProfile();
+              fetchWishlistCount();
+              fetchOrderCount();
+              if (userData) {
+                fetchReviewCount();
+              }
+            }
+          }}
+          disabled={countsLoading}
+        >
+          {countsLoading ? (
+            <ActivityIndicator size="small" color="#4CAF50" />
+          ) : (
+            <Ionicons name="refresh" size={24} color="#333" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -646,12 +819,28 @@ const ProfileScreen = ({ navigation, route }) => {
           <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.tabItem}>
+        <TouchableOpacity 
+          style={styles.tabItem}
+          onPress={() => navigation.navigate('Cart', {
+            userId,
+            phoneNumber,
+            userData,
+            token
+          })}
+        >
           <Ionicons name="cart" size={24} color="#666" />
           <Text style={styles.tabLabel}>Carts</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.tabItem}>
+        <TouchableOpacity 
+          style={styles.tabItem}
+          onPress={() => navigation.navigate('Wishlist', {
+            userId,
+            phoneNumber,
+            userData,
+            token
+          })}
+        >
           <Ionicons name="heart" size={24} color="#666" />
           <Text style={styles.tabLabel}>Wishlist</Text>
         </TouchableOpacity>
@@ -752,6 +941,9 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 34,
+  },
+  refreshButton: {
+    padding: 5,
   },
   scrollView: {
     flex: 1,

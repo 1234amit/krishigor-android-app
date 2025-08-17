@@ -43,7 +43,9 @@ const API_CONFIG = {
     PRODUCTS: '/api/v1/products',
     PRODUCT_DETAILS: '/api/v1/products',
     CATEGORIES: '/api/v1/products/categories',
-    CREATE_REVIEW: '/api/v1/consumer/create-review',
+    CREATE_REVIEW: '/api/v1/reviews/create-review',
+    GET_REVIEWS: '/api/v1/reviews/get-review',
+    GET_USER_REVIEWS: '/api/v1/reviews/user-review',
     ADD_PRODUCT: '/api/v1/producer/add-product',
     
     ADD_TO_WISHLIST: '/api/v1/wishlist/add',
@@ -88,6 +90,8 @@ export const API_URLS = {
   PRODUCT_DETAILS: getApiUrl(API_CONFIG.ENDPOINTS.PRODUCT_DETAILS),
   CATEGORIES: getApiUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
   CREATE_REVIEW: getApiUrl(API_CONFIG.ENDPOINTS.CREATE_REVIEW),
+  GET_REVIEWS: getApiUrl(API_CONFIG.ENDPOINTS.GET_REVIEWS),
+  GET_USER_REVIEWS: getApiUrl(API_CONFIG.ENDPOINTS.GET_USER_REVIEWS),
   ADD_PRODUCT: getApiUrl(API_CONFIG.ENDPOINTS.ADD_PRODUCT),
   // Wishlist URLs
   ADD_TO_WISHLIST: getApiUrl(API_CONFIG.ENDPOINTS.ADD_TO_WISHLIST),

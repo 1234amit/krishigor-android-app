@@ -74,56 +74,17 @@ const ProductDetailsScreen = ({ navigation, route }) => {
     }
   ];
 
-  // Sample Reviews data
-  const sampleReviews = [
-    {
-      id: 1,
-      userName: "Amin Islam",
-      rating: 4.8,
-      reviewText: "Lorem ipsum is simply dummy text of the printing and typesetting industry.",
-      profileImage: null,
-      date: "2024-01-15"
-    },
-    {
-      id: 2,
-      userName: "Sarwar Islam",
-      rating: 4.8,
-      reviewText: "Lorem ipsum is simply dummy text of the printing and typesetting industry. Lorem ipsum is simply dummy text of the printing and typesetting industry.",
-      profileImage: null,
-      date: "2024-01-14"
-    },
-    {
-      id: 3,
-      userName: "Rahul Kumar",
-      rating: 4.9,
-      reviewText: "Excellent product quality and fast delivery. Highly recommended!",
-      profileImage: null,
-      date: "2024-01-13"
-    },
-    {
-      id: 4,
-      userName: "Fatima Ahmed",
-      rating: 4.7,
-      reviewText: "Fresh and organic products. Will definitely order again.",
-      profileImage: null,
-      date: "2024-01-12"
-    },
-    {
-      id: 5,
-      userName: "Mohammad Ali",
-      rating: 4.6,
-      reviewText: "Good service and reasonable prices. Satisfied with the purchase.",
-      profileImage: null,
-      date: "2024-01-11"
-    }
-  ];
+  // Reviews state
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
 
   useEffect(() => {
     if (productId) {
       fetchProductDetails();
       fetchSimilarProducts();
-      // Set sample reviews for now
-      setReviews(sampleReviews);
+      // Fetch reviews for this product
+      fetchProductReviews();
       // Check wishlist status
       checkWishlistStatus();
     }
@@ -190,6 +151,64 @@ const ProductDetailsScreen = ({ navigation, route }) => {
       const { message } = handleNetworkError(error);
       console.error('Error fetching similar products:', message);
       // Don't show alert for similar products as it's not critical
+    }
+  };
+
+  // Fetch product reviews
+  const fetchProductReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      console.log('Fetching reviews for productId:', productId);
+      
+      const response = await retryRequest(async () => {
+        return axios.get(`${API_URLS.GET_REVIEWS}/${productId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      });
+      
+      console.log('Reviews API response:', response.data);
+      
+      if (response.data.success || response.status === 200) {
+        const reviewsData = response.data.data || response.data;
+        
+        // Update reviews state
+        if (reviewsData.reviews && Array.isArray(reviewsData.reviews)) {
+          const formattedReviews = reviewsData.reviews.map((review, index) => ({
+            id: review._id || review.id || index + 1,
+            userName: review.userName || 'Anonymous',
+            rating: review.rating || 0,
+            reviewText: review.comment || review.reviewText || 'No comment provided',
+            profileImage: review.profileImage || null,
+            date: review.createdAt || review.date || new Date().toISOString()
+          }));
+          
+          setReviews(formattedReviews);
+          setTotalReviews(reviewsData.count || formattedReviews.length);
+          setAverageRating(reviewsData.averageRating || 0);
+        } else {
+          setReviews([]);
+          setTotalReviews(0);
+          setAverageRating(0);
+        }
+      } else {
+        console.log('No reviews found or API response not successful');
+        setReviews([]);
+        setTotalReviews(0);
+        setAverageRating(0);
+      }
+    } catch (error) {
+      const { message } = handleNetworkError(error);
+      console.error('Error fetching product reviews:', message);
+      
+      // Set default values on error
+      setReviews([]);
+      setTotalReviews(0);
+      setAverageRating(0);
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -512,8 +531,8 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         API_URLS.CREATE_REVIEW,
         API_URLS.CREATE_REVIEW.replace('/create-review', '/review'),
         API_URLS.CREATE_REVIEW.replace('/create-review', '/reviews'),
-        API_URLS.CREATE_REVIEW.replace('/consumer/create-review', '/reviews'),
-        API_URLS.CREATE_REVIEW.replace('/consumer/create-review', '/consumer/review')
+        API_URLS.CREATE_REVIEW.replace('/reviews/create-review', '/reviews'),
+        API_URLS.CREATE_REVIEW.replace('/reviews/create-review', '/reviews/review')
       ];
       
       for (const endpoint of possibleEndpoints) {
@@ -552,10 +571,12 @@ const ProductDetailsScreen = ({ navigation, route }) => {
           date: response.data.review.createdAt
         };
 
-        setReviews(prev => [newReview, ...prev]);
         setReviewForm({ rating: 5, reviewText: '' });
         setShowReviewModal(false);
         Alert.alert('Success', 'Review submitted successfully!');
+        
+        // Refresh reviews to show the new review
+        fetchProductReviews();
       } else {
         Alert.alert('Error', response.data.message || 'Failed to submit review');
       }
@@ -707,8 +728,8 @@ const ProductDetailsScreen = ({ navigation, route }) => {
         <View style={styles.ratingPriceContainer}>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={styles.ratingText}>4.8</Text>
-            <Text style={styles.reviewsText}>(225k+ Reviews)</Text>
+            <Text style={styles.ratingText}>{averageRating > 0 ? averageRating.toFixed(1) : '4.8'}</Text>
+            <Text style={styles.reviewsText}>({totalReviews > 0 ? `${totalReviews} Reviews` : '225k+ Reviews'})</Text>
           </View>
           <Text style={styles.priceText}>৳{product.price}</Text>
         </View>
@@ -747,7 +768,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
             <View style={styles.averageRatingSection}>
               <View style={styles.ratingHeader}>
                 <Text style={styles.averageRatingText}>
-                  Average Rating: <Text style={styles.averageRatingNumber}>4.8</Text> ratings
+                  Average Rating: <Text style={styles.averageRatingNumber}>{averageRating.toFixed(1)}</Text> ({totalReviews} ratings)
                 </Text>
                 <TouchableOpacity 
                   style={styles.addReviewButton}
@@ -760,37 +781,57 @@ const ProductDetailsScreen = ({ navigation, route }) => {
             </View>
             
             {/* Reviews List */}
-            <ScrollView 
-              style={styles.reviewsScrollView}
-              showsVerticalScrollIndicator={true}
-            >
-              {reviews.map((review, index) => (
-                <View key={review.id} style={styles.reviewItem}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewerInfo}>
-                      <View style={styles.reviewerAvatar}>
-                        {review.profileImage ? (
-                          <Image 
-                            source={{ uri: review.profileImage }} 
-                            style={styles.avatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person" size={24} color="#4CAF50" />
-                        )}
-                      </View>
-                      <View style={styles.reviewerDetails}>
-                        <Text style={styles.reviewerName}>{review.userName}</Text>
-                        <View style={styles.reviewRating}>
-                          <Ionicons name="star" size={14} color="#FFD700" />
-                          <Text style={styles.reviewRatingText}>({review.rating})</Text>
+            {reviewsLoading ? (
+              <View style={styles.reviewsLoadingContainer}>
+                <ActivityIndicator size="large" color="#4CAF50" />
+                <Text style={styles.reviewsLoadingText}>Loading reviews...</Text>
+              </View>
+            ) : reviews.length > 0 ? (
+              <ScrollView 
+                style={styles.reviewsScrollView}
+                showsVerticalScrollIndicator={true}
+              >
+                {reviews.map((review, index) => (
+                  <View key={review.id} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewerInfo}>
+                        <View style={styles.reviewerAvatar}>
+                          {review.profileImage ? (
+                            <Image 
+                              source={{ uri: review.profileImage }} 
+                              style={styles.avatarImage}
+                            />
+                          ) : (
+                            <Ionicons name="person" size={24} color="#4CAF50" />
+                          )}
+                        </View>
+                        <View style={styles.reviewerDetails}>
+                          <Text style={styles.reviewerName}>{review.userName}</Text>
+                          <View style={styles.reviewRating}>
+                            <Ionicons name="star" size={14} color="#FFD700" />
+                            <Text style={styles.reviewRatingText}>({review.rating})</Text>
+                          </View>
                         </View>
                       </View>
                     </View>
+                    <Text style={styles.reviewText}>{review.reviewText}</Text>
+                    <Text style={styles.reviewDate}>
+                      {new Date(review.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </Text>
                   </View>
-                  <Text style={styles.reviewText}>{review.reviewText}</Text>
-                </View>
-              ))}
-            </ScrollView>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.noReviewsContainer}>
+                <Ionicons name="chatbubble-outline" size={48} color="#ccc" />
+                <Text style={styles.noReviewsText}>No reviews yet</Text>
+                <Text style={styles.noReviewsSubtext}>Be the first to review this product!</Text>
+              </View>
+            )}
           </View>
         );
       case 'faqs':
@@ -1783,6 +1824,40 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Reviews Loading and No Reviews Styles
+  reviewsLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  reviewsLoadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  noReviewsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  noReviewsText: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: '600',
+    marginTop: 15,
+  },
+  noReviewsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });
 

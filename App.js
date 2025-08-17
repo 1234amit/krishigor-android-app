@@ -21,6 +21,8 @@ import WishlistScreen from './screens/WishlistScreen';
 import CartScreen from './screens/CartScreen';
 import CheckoutScreen from './screens/CheckoutScreen';
 import OrdersScreen from './screens/OrdersScreen';
+import OrderHistoryScreen from './screens/OrderHistoryScreen';
+import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
 import PaymentMethodScreen from './screens/PaymentMethodScreen';
 import PaymentSuccessScreen from './screens/PaymentSuccessScreen';
 import AddProductScreen from './screens/AddProductScreen';
@@ -66,6 +68,8 @@ export default function App() {
           <Stack.Screen name="Cart" component={CartScreen} />
            <Stack.Screen name="Checkout" component={CheckoutScreen} />
            <Stack.Screen name="Orders" component={OrdersScreen} />
+          <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
            <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
            <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
            <Stack.Screen name="AddProduct" component={AddProductScreen} />

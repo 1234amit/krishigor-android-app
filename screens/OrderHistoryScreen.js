@@ -10,31 +10,33 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URLS } from '../config/api';
 import { handleNetworkError, retryRequest } from '../utils/networkUtils';
 
-const OrdersScreen = ({ navigation, route }) => {
+const OrderHistoryScreen = ({ navigation, route }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState('all'); // all, pending, confirmed, delivered, cancelled
   const { userId, phoneNumber, userData, token } = route.params || {};
 
   useEffect(() => {
     if (token) {
-      fetchOrders();
+      fetchUserOrders();
     } else {
       Alert.alert('Error', 'Authentication token not found. Please login again.');
       navigation.navigate('Login');
     }
   }, [token]);
 
-  const fetchOrders = async () => {
+  const fetchUserOrders = async () => {
     try {
       setLoading(true);
-      console.log('Fetching orders...');
+      console.log('Fetching order history for user with token');
 
       const response = await retryRequest(async () => {
         return axios.get(API_URLS.GET_ORDERS, {
@@ -42,26 +44,34 @@ const OrdersScreen = ({ navigation, route }) => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
+          // Backend gets userId from JWT token, no need to send it
         });
       });
 
-      console.log('Orders API response:', response.data);
+      console.log('Order History API response:', response.data);
 
       const isSuccess = response.data.success || 
                        response.data.status === 'success' || 
                        response.status === 200;
 
       if (isSuccess) {
-        const ordersData = response.data.data || response.data.orders || [];
-        console.log('Fetched orders:', ordersData);
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
+        // Extract orders from the nested data structure
+        const ordersData = response.data.data?.orders || response.data.orders || [];
+        
+        // Ensure ordersData is an array
+        if (!Array.isArray(ordersData)) {
+          ordersData = [];
+        }
+
+        console.log('Orders data received:', ordersData);
+        setOrders(ordersData);
       } else {
-        console.log('Orders fetch response:', response.data);
+        console.log('Order history fetch response:', response.data);
         setOrders([]);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      const { errorMessage } = handleNetworkError(error, 'Fetching orders');
+      console.error('Error fetching order history:', error);
+      const { errorMessage } = handleNetworkError(error, 'Fetching order history');
       Alert.alert('Error', errorMessage);
       setOrders([]);
     } finally {
@@ -72,7 +82,7 @@ const OrdersScreen = ({ navigation, route }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchOrders();
+    fetchUserOrders();
   };
 
   const getStatusColor = (status) => {
@@ -89,6 +99,8 @@ const OrdersScreen = ({ navigation, route }) => {
         return '#4CAF50';
       case 'cancelled':
         return '#F44336';
+      case 'completed':
+        return '#4CAF50';
       default:
         return '#666';
     }
@@ -108,28 +120,51 @@ const OrdersScreen = ({ navigation, route }) => {
         return 'checkmark-done-circle';
       case 'cancelled':
         return 'close-circle';
+      case 'completed':
+        return 'checkmark-done-circle';
       default:
         return 'help-circle';
     }
   };
 
+  const getFilteredOrders = () => {
+    if (filter === 'all') return orders;
+    return orders.filter(order => 
+      (order.orderStatus || '').toLowerCase() === filter.toLowerCase()
+    );
+  };
+
   const renderOrderItem = (order, index) => {
-    const orderDate = new Date(order.createdAt || order.orderDate).toLocaleDateString();
-    const status = order.status || 'pending';
+    const orderDate = new Date(order.createdAt || order.orderDate || order.date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    
+    const status = order.orderStatus || order.status || 'pending';
+    const orderId = order.orderId || order._id || order.id || `ORDER-${index + 1}`;
+    const total = order.totalAmount || order.total || order.orderInfo?.total || order.amount || 0;
+    const itemsCount = order.totalItems || order.orderInfo?.items?.length || order.items?.length || order.products?.length || 0;
     
     return (
       <TouchableOpacity
         key={index}
         style={styles.orderItem}
         onPress={() => {
-          // Navigate to order details (you can create this screen later)
-          Alert.alert('Order Details', `Order ID: ${order.orderId || order._id}\nStatus: ${status}\nTotal: ৳${order.total || order.orderInfo?.total || 0}`);
+          // Show order details in alert (can be expanded to full screen later)
+          Alert.alert('Order Details', 
+            `Order ID: ${orderId}\n` +
+            `Date: ${orderDate}\n` +
+            `Status: ${status.charAt(0).toUpperCase() + status.slice(1)}\n` +
+            `Total: ৳${total}\n` +
+            `Items: ${itemsCount}`
+          );
         }}
       >
         <View style={styles.orderHeader}>
           <View style={styles.orderInfo}>
             <Text style={styles.orderId}>
-              Order #{order.orderId || order._id?.slice(-8) || 'N/A'}
+              Order #{typeof orderId === 'string' && orderId.length > 8 ? orderId.slice(-8) : orderId}
             </Text>
             <Text style={styles.orderDate}>{orderDate}</Text>
           </View>
@@ -147,20 +182,55 @@ const OrdersScreen = ({ navigation, route }) => {
 
         <View style={styles.orderDetails}>
           <Text style={styles.orderTotal}>
-            Total: ৳{order.total || order.orderInfo?.total || 0}
+            Total: ৳{total}
           </Text>
           <Text style={styles.orderItems}>
-            {order.orderInfo?.items?.length || order.items?.length || 0} items
+            {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
           </Text>
-
         </View>
+
+        {/* Show order items if available */}
+        {order.items && order.items.length > 0 && (
+          <View style={styles.orderItemsList}>
+            {order.items.slice(0, 3).map((item, itemIndex) => (
+              <View key={itemIndex} style={styles.orderItemRow}>
+                {item.productImage && (
+                  <Image 
+                    source={{ uri: item.productImage }} 
+                    style={styles.productImage}
+                    resizeMode="cover"
+                  />
+                )}
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName} numberOfLines={1}>
+                    {item.productName || item.name || 'Product'}
+                  </Text>
+                  <Text style={styles.itemQuantity}>
+                    Quantity: {item.quantity || 1}
+                  </Text>
+                  <Text style={styles.itemPrice}>
+                    ৳{item.price || item.product?.price || 0}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {order.items.length > 3 && (
+              <Text style={styles.moreItems}>... and {order.items.length - 3} more items</Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.orderActions}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
-              // View order details
-              Alert.alert('Order Details', `Order ID: ${order.orderId || order._id}\nStatus: ${status}\nTotal: ৳${order.total || order.orderInfo?.total || 0}`);
+              Alert.alert('Order Details', 
+                `Order ID: ${orderId}\n` +
+                `Date: ${orderDate}\n` +
+                `Status: ${status.charAt(0).toUpperCase() + status.slice(1)}\n` +
+                `Total: ৳${total}\n` +
+                `Items: ${itemsCount}`
+              );
             }}
           >
             <Ionicons name="eye" size={16} color="#4CAF50" />
@@ -179,7 +249,7 @@ const OrdersScreen = ({ navigation, route }) => {
                     { 
                       text: 'Yes', 
                       style: 'destructive',
-                      onPress: () => cancelOrder(order.orderId || order._id)
+                      onPress: () => cancelOrder(orderId)
                     }
                   ]
                 );
@@ -187,6 +257,21 @@ const OrdersScreen = ({ navigation, route }) => {
             >
               <Ionicons name="close" size={16} color="#F44336" />
               <Text style={[styles.actionButtonText, { color: '#F44336' }]}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+
+          {status === 'delivered' && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.reviewButton]}
+              onPress={() => {
+                Alert.alert('Review Order', 'Would you like to review this order?', [
+                  { text: 'Later', style: 'cancel' },
+                  { text: 'Review Now', onPress: () => navigateToReview(orderId) }
+                ]);
+              }}
+            >
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={[styles.actionButtonText, { color: '#FFD700' }]}>Review</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -209,7 +294,7 @@ const OrdersScreen = ({ navigation, route }) => {
 
       if (response.data.success || response.status === 200) {
         Alert.alert('Success', 'Order cancelled successfully');
-        fetchOrders(); // Refresh orders
+        fetchUserOrders(); // Refresh orders
       } else {
         Alert.alert('Error', response.data.message || 'Failed to cancel order');
       }
@@ -220,14 +305,55 @@ const OrdersScreen = ({ navigation, route }) => {
     }
   };
 
+  const navigateToReview = (orderId) => {
+    // Navigate to review screen (you can implement this later)
+    Alert.alert('Review', `Review functionality for order ${orderId} will be implemented soon.`);
+  };
+
+  const renderFilterTabs = () => {
+    const filters = [
+      { key: 'all', label: 'All Orders', count: orders.length },
+      { key: 'pending', label: 'Pending', count: orders.filter(o => (o.orderStatus || '').toLowerCase() === 'pending').length },
+      { key: 'confirmed', label: 'Confirmed', count: orders.filter(o => (o.orderStatus || '').toLowerCase() === 'confirmed').length },
+      { key: 'delivered', label: 'Delivered', count: orders.filter(o => (o.orderStatus || '').toLowerCase() === 'delivered').length },
+      { key: 'cancelled', label: 'Cancelled', count: orders.filter(o => (o.orderStatus || '').toLowerCase() === 'cancelled').length },
+    ];
+
+    return (
+      <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {filters.map((filterItem) => (
+            <TouchableOpacity
+              key={filterItem.key}
+              style={[
+                styles.filterTab,
+                filter === filterItem.key && styles.activeFilterTab
+              ]}
+              onPress={() => setFilter(filterItem.key)}
+            >
+              <Text style={[
+                styles.filterTabText,
+                filter === filterItem.key && styles.activeFilterTabText
+              ]}>
+                {filterItem.label} ({filterItem.count})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>Loading orders...</Text>
+        <Text style={styles.loadingText}>Loading your order history...</Text>
       </View>
     );
   }
+
+  const filteredOrders = getFilteredOrders();
 
   return (
     <View style={styles.container}>
@@ -241,14 +367,17 @@ const OrdersScreen = ({ navigation, route }) => {
         >
           <Ionicons name="chevron-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Orders</Text>
+        <Text style={styles.headerTitle}>Order History</Text>
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={fetchOrders}
+          onPress={fetchUserOrders}
         >
           <Ionicons name="refresh" size={24} color="white" />
         </TouchableOpacity>
       </View>
+
+      {/* Filter Tabs */}
+      {orders.length > 0 && renderFilterTabs()}
 
       <ScrollView
         style={styles.scrollView}
@@ -262,28 +391,46 @@ const OrdersScreen = ({ navigation, route }) => {
           />
         }
       >
-        {orders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={80} color="#ccc" />
-            <Text style={styles.emptyTitle}>No orders yet</Text>
-            <Text style={styles.emptySubtitle}>
-              You haven't placed any orders yet. Start shopping to see your orders here.
-            </Text>
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={() => navigation.navigate('Dashboard', {
-                userId,
-                phoneNumber,
-                userData,
-                token
-              })}
-            >
-              <Text style={styles.browseButtonText}>Start Shopping</Text>
-            </TouchableOpacity>
+            {orders.length === 0 ? (
+              <>
+                <Ionicons name="receipt-outline" size={80} color="#ccc" />
+                <Text style={styles.emptyTitle}>No orders yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  You haven't placed any orders yet. Start shopping to see your order history here.
+                </Text>
+                <TouchableOpacity
+                  style={styles.browseButton}
+                  onPress={() => navigation.navigate('Dashboard', {
+                    userId,
+                    phoneNumber,
+                    userData,
+                    token
+                  })}
+                >
+                  <Text style={styles.browseButtonText}>Start Shopping</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Ionicons name="filter-outline" size={80} color="#ccc" />
+                <Text style={styles.emptyTitle}>No {filter} orders</Text>
+                <Text style={styles.emptySubtitle}>
+                  You don't have any {filter} orders at the moment.
+                </Text>
+                <TouchableOpacity
+                  style={styles.browseButton}
+                  onPress={() => setFilter('all')}
+                >
+                  <Text style={styles.browseButtonText}>View All Orders</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         ) : (
           <View style={styles.ordersContainer}>
-            {orders.map(renderOrderItem)}
+            {filteredOrders.map(renderOrderItem)}
           </View>
         )}
       </ScrollView>
@@ -315,6 +462,30 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     padding: 5,
+  },
+  filterContainer: {
+    backgroundColor: 'white',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  filterTab: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginHorizontal: 5,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  activeFilterTab: {
+    backgroundColor: '#4CAF50',
+  },
+  filterTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  activeFilterTabText: {
+    color: 'white',
   },
   scrollView: {
     flex: 1,
@@ -426,6 +597,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  orderItemsList: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  productImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  itemQuantity: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  itemPrice: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  moreItems: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 5,
+  },
   orderActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -442,6 +657,9 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#fff0f0',
   },
+  reviewButton: {
+    backgroundColor: '#fffbf0',
+  },
   actionButtonText: {
     fontSize: 12,
     fontWeight: '600',
@@ -450,4 +668,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OrdersScreen; 
+export default OrderHistoryScreen;
